@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EstateHub — Rental Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#faf9f6',
+            gold: '#c8a96e',
+            'gold-light': '#dfc08a',
+            'near-black': '#1a1814',
+            'warm-gray': '#6b6560',
+            'border-subtle': 'rgba(26,24,20,0.12)',
+          },
+          fontFamily: {
+            serif: ['"DM Serif Display"', 'Georgia', 'serif'],
+            sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #faf9f6;
+      color: #1a1814;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(200,169,110,0.4); border-radius: 3px; }
+
+    /* Nav blur */
+    .nav-glass {
+      background: rgba(250,249,246,0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(26,24,20,0.08);
+    }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideRight {
+      from { opacity: 0; transform: translateX(32px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    @keyframes skeleton-pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+
+    .animate-fade-up   { animation: fadeUp 0.5s ease both; }
+    .animate-slide-in  { animation: slideRight 0.35s ease both; }
+    .animate-fade-in   { animation: fadeIn 0.3s ease both; }
+    .skeleton { animation: skeleton-pulse 1.6s ease infinite; background: rgba(26,24,20,0.08); border-radius: 6px; }
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border: 1px solid rgba(26,24,20,0.10);
+      border-radius: 16px;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(26,24,20,0.10);
+    }
+
+    /* Property card gradient placeholder */
+    .prop-img {
+      background: linear-gradient(135deg, #c8a96e22 0%, #1a181420 50%, #c8a96e18 100%);
+      border-radius: 12px 12px 0 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .prop-img::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 50%, rgba(26,24,20,0.55) 100%);
+    }
+
+    /* Gold button */
+    .btn-gold {
+      background: #c8a96e;
+      color: #1a1814;
+      font-weight: 500;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 14px;
+      transition: background 0.18s, transform 0.15s;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+    }
+    .btn-gold:hover { background: #dfc08a; transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      color: #1a1814;
+      font-weight: 500;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 14px;
+      transition: background 0.18s;
+      cursor: pointer;
+      border: 1px solid rgba(26,24,20,0.18);
+      font-family: inherit;
+    }
+    .btn-outline:hover { background: rgba(26,24,20,0.05); }
+    .btn-sm { padding: 5px 12px; font-size: 13px; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .badge-available  { background: #dcfce7; color: #15803d; }
+    .badge-occupied   { background: #dbeafe; color: #1d4ed8; }
+    .badge-maintenance{ background: #fef9c3; color: #854d0e; }
+    .badge-active     { background: #dbeafe; color: #1d4ed8; }
+    .badge-expired    { background: #f3f4f6; color: #6b7280; }
+    .badge-terminated { background: #fee2e2; color: #dc2626; }
+    .badge-pending    { background: #fef3c7; color: #d97706; }
+    .badge-paid       { background: #dcfce7; color: #15803d; }
+    .badge-late       { background: #fee2e2; color: #dc2626; }
+    .badge-waived     { background: #f3f4f6; color: #6b7280; }
+    .badge-low        { background: #f3f4f6; color: #6b7280; }
+    .badge-medium     { background: #fef3c7; color: #d97706; }
+    .badge-high       { background: #fed7aa; color: #c2410c; }
+    .badge-emergency  { background: #fee2e2; color: #dc2626; }
+    .badge-open       { background: #fee2e2; color: #dc2626; }
+    .badge-in_progress{ background: #dbeafe; color: #1d4ed8; }
+    .badge-resolved   { background: #dcfce7; color: #15803d; }
+
+    /* Nav tabs */
+    .nav-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      color: #6b6560;
+      white-space: nowrap;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+    }
+    .nav-tab:hover { background: rgba(200,169,110,0.12); color: #1a1814; }
+    .nav-tab.active { background: rgba(200,169,110,0.18); color: #1a1814; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(26,24,20,0.45);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-box {
+      background: #faf9f6;
+      border: 1px solid rgba(26,24,20,0.12);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: fadeUp 0.3s ease;
+    }
+
+    /* Toast */
+    #toast-container {
+      position: fixed; top: 80px; right: 24px; z-index: 100;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      background: #1a1814;
+      color: #faf9f6;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      min-width: 240px;
+      animation: slideRight 0.35s ease;
+      border-left: 3px solid #c8a96e;
+    }
+    .toast.error { border-left-color: #dc2626; }
+    .toast.success { border-left-color: #15803d; }
+
+    /* Kanban */
+    .kanban-col {
+      background: rgba(26,24,20,0.03);
+      border: 1px solid rgba(26,24,20,0.08);
+      border-radius: 14px;
+      padding: 16px;
+      min-height: 200px;
+    }
+    .kanban-card {
+      background: #fff;
+      border: 1px solid rgba(26,24,20,0.10);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(26,24,20,0.08); }
+
+    /* Input */
+    .form-input {
+      width: 100%;
+      padding: 9px 13px;
+      border: 1px solid rgba(26,24,20,0.18);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: #1a1814;
+      transition: border-color 0.18s;
+      outline: none;
+    }
+    .form-input:focus { border-color: #c8a96e; }
+    .form-label { font-size: 13px; font-weight: 500; color: #6b6560; margin-bottom: 5px; display: block; }
+
+    /* Table */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left; font-size: 12px; font-weight: 600;
+      color: #6b6560; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 10px 14px; border-bottom: 1px solid rgba(26,24,20,0.10);
+    }
+    .data-table td {
+      padding: 12px 14px; font-size: 14px;
+      border-bottom: 1px solid rgba(26,24,20,0.06);
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(200,169,110,0.05); }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 60px 24px; color: #6b6560;
+      text-align: center;
+    }
+
+    /* Credit score bar */
+    .score-bar { height: 6px; border-radius: 3px; background: rgba(26,24,20,0.08); overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+    /* Section fade */
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: fadeUp 0.4s ease; }
+
+    /* Hero accent line */
+    .gold-line { width: 48px; height: 2px; background: #c8a96e; border-radius: 2px; }
+
+    /* Responsive table wrapper */
+    .table-wrap { overflow-x: auto; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav class="nav-glass fixed top-0 left-0 right-0 z-40">
+  <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+    <div class="flex items-center gap-3">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="8" fill="#c8a96e"/>
+        <path d="M14 6L22 12V22H18V17H10V22H6V12L14 6Z" fill="white"/>
+      </svg>
+      <span class="font-serif text-xl text-near-black tracking-tight">EstateHub</span>
+    </div>
+
+    <div class="flex items-center gap-1 overflow-x-auto">
+      <button class="nav-tab active" onclick="switchView('dashboard')">Dashboard</button>
+      <button class="nav-tab" onclick="switchView('properties')">Properties</button>
+      <button class="nav-tab" onclick="switchView('tenants')">Tenants</button>
+      <button class="nav-tab" onclick="switchView('leases')">Leases</button>
+      <button class="nav-tab" onclick="switchView('payments')">Payments</button>
+      <button class="nav-tab" onclick="switchView('maintenance')">Maintenance</button>
+    </div>
+
+    <div class="text-sm text-warm-gray hidden md:block">
+      <span id="current-date"></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════ TOAST ═══════════════════ -->
+<div id="toast-container"></div>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main class="pt-20 max-w-7xl mx-auto px-6 pb-20">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <section id="view-dashboard" class="view-section active">
+    <!-- Hero -->
+    <div class="py-10 mb-8">
+      <div class="gold-line mb-4"></div>
+      <h1 class="font-serif text-5xl text-near-black mb-2">Good morning.</h1>
+      <p class="text-warm-gray text-lg">Here's your portfolio at a glance.</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10" id="stat-cards">
+      <div class="card p-6 skeleton h-28"></div>
+      <div class="card p-6 skeleton h-28"></div>
+      <div class="card p-6 skeleton h-28"></div>
+      <div class="card p-6 skeleton h-28"></div>
+    </div>
+
+    <!-- Lower grid -->
+    <div class="grid lg:grid-cols-5 gap-6">
+      <!-- Recent payments (3/5) -->
+      <div class="lg:col-span-3 card p-6">
+        <h2 class="font-serif text-2xl mb-1">Recent Payments</h2>
+        <p class="text-warm-gray text-sm mb-5">Latest rent transactions</p>
+        <div id="dashboard-payments" class="table-wrap">
+          <div class="skeleton h-4 mb-3 rounded"></div>
+          <div class="skeleton h-4 mb-3 rounded"></div>
+          <div class="skeleton h-4 rounded"></div>
+        </div>
+      </div>
+
+      <!-- Maintenance alerts (2/5) -->
+      <div class="lg:col-span-2 card p-6">
+        <h2 class="font-serif text-2xl mb-1">Alerts</h2>
+        <p class="text-warm-gray text-sm mb-5">Open maintenance issues</p>
+        <div id="dashboard-alerts">
+          <div class="skeleton h-16 mb-3 rounded-lg"></div>
+          <div class="skeleton h-16 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PROPERTIES ═══ -->
+  <section id="view-properties" class="view-section">
+    <div class="py-10 mb-6 flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="gold-line mb-4"></div>
+        <h1 class="font-serif text-5xl text-near-black">Properties</h1>
+      </div>
+      <button class="btn-gold" onclick="openModal('add-property')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add Property
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 mb-8">
+      <input type="text" id="prop-search" class="form-input" style="max-width:260px" placeholder="Search properties…" oninput="filterProperties()" />
+      <select id="prop-status" class="form-input" style="max-width:160px" onchange="filterProperties()">
+        <option value="">All Status</option>
+        <option value="available">Available</option>
+        <option value="occupied">Occupied</option>
+        <option value="maintenance">Maintenance</option>
+      </select>
+      <select id="prop-type" class="form-input" style="max-width:160px" onchange="filterProperties()">
+        <option value="">All Types</option>
+        <option value="apartment">Apartment</option>
+        <option value="house">House</option>
+        <option value="studio">Studio</option>
+        <option value="villa">Villa</option>
+        <option value="commercial">Commercial</option>
+      </select>
+    </div>
+
+    <div id="properties-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </section>
+
+  <!-- ═══ TENANTS ═══ -->
+  <section id="view-tenants" class="view-section">
+    <div class="py-10 mb-6 flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="gold-line mb-4"></div>
+        <h1 class="font-serif text-5xl text-near-black">Tenants</h1>
+      </div>
+      <button class="btn-gold" onclick="openModal('add-tenant')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add Tenant
+      </button>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="table-wrap">
+        <table class="data-table" id="tenants-table">
+          <thead>
+            <tr>
+              <th>Tenant</th>
+              <th>Verified</th>
+              <th>Credit Score</th>
+              <th>Current Property</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tenants-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ LEASES ═══ -->
+  <section id="view-leases" class="view-section">
+    <div class="py-10 mb-6 flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="gold-line mb-4"></div>
+        <h1 class="font-serif text-5xl text-near-black">Leases</h1>
+      </div>
+      <button class="btn-gold" onclick="openModal('add-lease')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        New Lease
+      </button>
+    </div>
+    <div id="leases-list" class="flex flex-col gap-4"></div>
+  </section>
+
+  <!-- ═══ PAYMENTS ═══ -->
+  <section id="view-payments" class="view-section">
+    <div class="py-10 mb-6">
+      <div class="gold-line mb-4"></div>
+      <h1 class="font-serif text-5xl text-near-black">Payments</h1>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Property</th>
+              <th>Tenant</th>
+              <th>Amount</th>
+              <th>Due Date</th>
+              <th>Paid Date</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="payments-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MAINTENANCE ═══ -->
+  <section id="view-maintenance" class="view-section">
+    <div class="py-10 mb-6 flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <div class="gold-line mb-4"></div>
+        <h1 class="font-serif text-5xl text-near-black">Maintenance</h1>
+      </div>
+      <button class="btn-gold" onclick="openModal('add-maintenance')">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Log Issue
+      </button>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="kanban-col">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+          <span class="font-semibold text-sm uppercase tracking-wider text-warm-gray">Open</span>
+          <span class="ml-auto text-sm text-warm-gray" id="count-open">—</span>
+        </div>
+        <div id="kanban-open"></div>
+      </div>
+      <div class="kanban-col">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-2.5 h-2.5 rounded-full bg-blue-400"></div>
+          <span class="font-semibold text-sm uppercase tracking-wider text-warm-gray">In Progress</span>
+          <span class="ml-auto text-sm text-warm-gray" id="count-in_progress">—</span>
+        </div>
+        <div id="kanban-in_progress"></div>
+      </div>
+      <div class="kanban-col">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+          <span class="font-semibold text-sm uppercase tracking-wider text-warm-gray">Resolved</span>
+          <span class="ml-auto text-sm text-warm-gray" id="count-resolved">—</span>
+        </div>
+        <div id="kanban-resolved"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+
+<!-- Add Property Modal -->
+<div id="modal-add-property" class="modal-overlay" style="display:none" onclick="closeModalOutside(event,'add-property')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="font-serif text-3xl">Add Property</h2>
+      <button onclick="closeModal('add-property')" class="text-warm-gray hover:text-near-black text-xl leading-none">✕</button>
+    </div>
+    <form id="form-add-property" onsubmit="submitProperty(event)">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="form-label">Title</label>
+          <input name="title" class="form-input" required />
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-input" rows="2"></textarea>
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Address</label>
+          <input name="address" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">City</label>
+          <input name="city" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Postcode</label>
+          <input name="postcode" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Type</label>
+          <select name="type" class="form-input" required>
+            <option value="apartment">Apartment</option>
+            <option value="house">House</option>
+            <option value="studio">Studio</option>
+            <option value="villa">Villa</option>
+            <option value="commercial">Commercial</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Rent / PCM (£)</label>
+          <input name="rent_pcm" type="number" step="0.01" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Bedrooms</label>
+          <input name="bedrooms" type="number" class="form-input" value="1" min="0" />
+        </div>
+        <div>
+          <label class="form-label">Bathrooms</label>
+          <input name="bathrooms" type="number" class="form-input" value="1" min="1" />
+        </div>
+        <div>
+          <label class="form-label">Area (sqft)</label>
+          <input name="area_sqft" type="number" class="form-input" />
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Landlord ID</label>
+          <input name="landlord_id" type="number" class="form-input" value="1" required />
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button type="button" class="btn-outline" onclick="closeModal('add-property')">Cancel</button>
+        <button type="submit" class="btn-gold">Save Property</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Tenant Modal -->
+<div id="modal-add-tenant" class="modal-overlay" style="display:none" onclick="closeModalOutside(event,'add-tenant')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="font-serif text-3xl">Add Tenant</h2>
+      <button onclick="closeModal('add-tenant')" class="text-warm-gray hover:text-near-black text-xl leading-none">✕</button>
+    </div>
+    <form id="form-add-tenant" onsubmit="submitTenant(event)">
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="form-label">Full Name</label>
+          <input name="name" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input name="email" type="email" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input name="phone" class="form-input" />
+        </div>
+        <div>
+          <label class="form-label">Credit Score (300–850)</label>
+          <input name="credit_score" type="number" min="300" max="850" class="form-input" />
+        </div>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input name="id_verified" type="checkbox" class="w-4 h-4 accent-gold" />
+          <span class="text-sm">ID Verified</span>
+        </label>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button type="button" class="btn-outline" onclick="closeModal('add-tenant')">Cancel</button>
+        <button type="submit" class="btn-gold">Add Tenant</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Lease Modal -->
+<div id="modal-add-lease" class="modal-overlay" style="display:none" onclick="closeModalOutside(event,'add-lease')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="font-serif text-3xl">New Lease</h2>
+      <button onclick="closeModal('add-lease')" class="text-warm-gray hover:text-near-black text-xl leading-none">✕</button>
+    </div>
+    <form id="form-add-lease" onsubmit="submitLease(event)">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="form-label">Property</label>
+          <select name="property_id" id="lease-prop-select" class="form-input" required></select>
+        </div>
+        <div class="col-span-2">
+          <label class="form-label">Tenant</label>
+          <select name="tenant_id" id="lease-tenant-select" class="form-input" required></select>
+        </div>
+        <div>
+          <label class="form-label">Start Date</label>
+          <input name="start_date" type="date" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">End Date</label>
+          <input name="end_date" type="date" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Rent / PCM (£)</label>
+          <input name="rent_pcm" type="number" step="0.01" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Deposit (£)</label>
+          <input name="deposit" type="number" step="0.01" class="form-input" required />
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button type="button" class="btn-outline" onclick="closeModal('add-lease')">Cancel</button>
+        <button type="submit" class="btn-gold">Create Lease</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Maintenance Modal -->
+<div id="modal-add-maintenance" class="modal-overlay" style="display:none" onclick="closeModalOutside(event,'add-maintenance')">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="font-serif text-3xl">Log Issue</h2>
+      <button onclick="closeModal('add-maintenance')" class="text-warm-gray hover:text-near-black text-xl leading-none">✕</button>
+    </div>
+    <form id="form-add-maintenance" onsubmit="submitMaintenance(event)">
+      <div class="flex flex-col gap-4">
+        <div>
+          <label class="form-label">Property</label>
+          <select name="property_id" id="maint-prop-select" class="form-input" required></select>
+        </div>
+        <div>
+          <label class="form-label">Tenant (optional)</label>
+          <select name="tenant_id" id="maint-tenant-select" class="form-input">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Title</label>
+          <input name="title" class="form-input" required />
+        </div>
+        <div>
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-input" rows="3"></textarea>
+        </div>
+        <div>
+          <label class="form-label">Priority</label>
+          <select name="priority" class="form-input">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button type="button" class="btn-outline" onclick="closeModal('add-maintenance')">Cancel</button>
+        <button type="submit" class="btn-gold">Log Issue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════ SCRIPT ═══════════════════ -->
+<script>
+// ─── State ───────────────────────────────────────────────
+const state = {
+  properties: [],
+  tenants: [],
+  leases: [],
+  payments: [],
+  maintenance: [],
+  currentView: 'dashboard',
+};
+
+// ─── Helpers ─────────────────────────────────────────────
+const api = {
+  async get(path) {
+    const r = await fetch(`/api${path}`);
+    if (!r.ok) throw new Error(`${r.status}: ${r.statusText}`);
+    const j = await r.json();
+    return j.data;
+  },
+  async post(path, body) {
+    const r = await fetch(`/api${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.details || j.error || 'Request failed');
+    return j;
+  },
+  async put(path, body) {
+    const r = await fetch(`/api${path}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.details || j.error || 'Request failed');
+    return j;
+  },
+  async delete(path) {
+    const r = await fetch(`/api${path}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  },
+};
+
+function fmt(n) {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(n);
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function badge(value) {
+  return `<span class="badge badge-${value}">${value.replace('_', ' ')}</span>`;
+}
+function scoreColor(score) {
+  if (!score) return '#d1d5db';
+  if (score >= 750) return '#16a34a';
+  if (score >= 650) return '#d97706';
+  return '#dc2626';
+}
+
+function toast(msg, type = 'default') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 400); }, 3200);
+}
+
+// ─── Navigation ──────────────────────────────────────────
+function switchView(view) {
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const labels = ['dashboard','properties','tenants','leases','payments','maintenance'];
+  tabs[labels.indexOf(view)]?.classList.add('active');
+  state.currentView = view;
+  loadView(view);
+}
+
+async function loadView(view) {
+  try {
+    if (view === 'dashboard') await loadDashboard();
+    else if (view === 'properties') await loadProperties();
+    else if (view === 'tenants') await loadTenants();
+    else if (view === 'leases') await loadLeases();
+    else if (view === 'payments') await loadPayments();
+    else if (view === 'maintenance') await loadMaintenance();
+  } catch (e) {
+    toast(e.message || 'Failed to load', 'error');
+  }
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────
+async function loadDashboard() {
+  const data = await api.get('/dashboard');
+
+  // Stat cards
+  const cards = [
+    { label: 'Total Properties', value: data.total_properties, sub: `${data.occupied_properties} occupied`, icon: '🏠' },
+    { label: 'Occupancy Rate', value: `${data.occupancy_rate}%`, sub: 'of portfolio', icon: '📊' },
+    { label: 'Monthly Revenue', value: fmt(data.monthly_revenue), sub: 'active leases', icon: '£' },
+    { label: 'Open Issues', value: data.open_maintenance, sub: 'maintenance requests', icon: '🔧' },
+  ];
+
+  document.getElementById('stat-cards').innerHTML = cards.map((c, i) => `
+    <div class="card p-6 animate-fade-up" style="animation-delay:${i * 0.08}s">
+      <div class="text-2xl mb-3">${c.icon}</div>
+      <div class="font-serif text-3xl text-near-black mb-1">${c.value}</div>
+      <div class="text-sm font-medium text-near-black mb-0.5">${c.label}</div>
+      <div class="text-xs text-warm-gray">${c.sub}</div>
+    </div>
+  `).join('');
+
+  // Outstanding banner
+  if (data.outstanding_payments > 0) {
+    const banner = document.createElement('div');
+    banner.className = 'mb-6 px-4 py-3 rounded-xl text-sm font-medium';
+    banner.style.background = '#fee2e2';
+    banner.style.color = '#dc2626';
+    banner.innerHTML = `⚠ Outstanding payments: <strong>${fmt(data.outstanding_payments)}</strong> pending or late`;
+    document.getElementById('stat-cards').after(banner);
+  }
+
+  // Recent payments table
+  const payEl = document.getElementById('dashboard-payments');
+  if (!data.recent_payments.length) {
+    payEl.innerHTML = emptyState('No payments recorded yet');
+    return;
+  }
+  payEl.innerHTML = `
+    <table class="data-table">
+      <thead><tr>
+        <th>Property</th><th>Tenant</th><th>Amount</th><th>Due</th><th>Status</th>
+      </tr></thead>
+      <tbody>
+        ${data.recent_payments.map(p => `
+          <tr>
+            <td class="font-medium">${p.property_title}</td>
+            <td class="text-warm-gray">${p.tenant_name}</td>
+            <td>${fmt(p.amount)}</td>
+            <td class="text-warm-gray">${fmtDate(p.due_date)}</td>
+            <td>${badge(p.status)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+
+  // Alerts
+  const alertEl = document.getElementById('dashboard-alerts');
+  if (!data.maintenance_alerts.length) {
+    alertEl.innerHTML = '<div class="text-warm-gray text-sm text-center py-4">All clear — no open issues.</div>';
+    return;
+  }
+  alertEl.innerHTML = data.maintenance_alerts.map(m => `
+    <div class="kanban-card mb-0 mt-0" style="margin-bottom:10px">
+      <div class="flex items-start justify-between gap-2 mb-1">
+        <span class="font-medium text-sm">${m.title}</span>
+        ${badge(m.priority)}
+      </div>
+      <div class="text-xs text-warm-gray">${m.property_title}</div>
+    </div>
+  `).join('');
+}
+
+// ─── PROPERTIES ──────────────────────────────────────────
+async function loadProperties() {
+  const data = await api.get('/properties');
+  state.properties = data;
+  renderProperties(data);
+}
+
+function renderProperties(list) {
+  const grid = document.getElementById('properties-grid');
+  if (!list.length) {
+    grid.innerHTML = `<div class="col-span-3">${emptyState('No properties match your filters')}</div>`;
+    return;
+  }
+  grid.innerHTML = list.map((p, i) => `
+    <div class="card overflow-hidden animate-fade-up" style="animation-delay:${i * 0.06}s">
+      <div class="prop-img h-44 flex items-end p-4" style="background: linear-gradient(135deg, ${propGradient(p.type)})">
+        <div style="position:relative;z-index:1">
+          <div class="text-white font-serif text-xl leading-tight">${p.title}</div>
+          <div class="text-white/70 text-sm">${p.city}</div>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="text-xs text-warm-gray mb-0.5">${p.address}, ${p.postcode}</div>
+            <div class="flex gap-3 text-sm text-warm-gray mt-1">
+              <span>🛏 ${p.bedrooms}</span>
+              <span>🚿 ${p.bathrooms}</span>
+              ${p.area_sqft ? `<span>📐 ${p.area_sqft.toLocaleString()} sqft</span>` : ''}
+            </div>
+          </div>
+          ${badge(p.status)}
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="font-serif text-2xl">${fmt(p.rent_pcm)}<span class="text-sm text-warm-gray font-sans">/mo</span></div>
+          <div class="flex gap-2">
+            <button class="btn-outline btn-sm" onclick="deleteProperty(${p.id})">Delete</button>
+          </div>
+        </div>
+        ${p.amenities?.length ? `
+          <div class="flex flex-wrap gap-1 mt-3">
+            ${p.amenities.slice(0,3).map(a => `<span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(200,169,110,0.15);color:#6b6560">${a}</span>`).join('')}
+            ${p.amenities.length > 3 ? `<span class="text-xs text-warm-gray">+${p.amenities.length - 3}</span>` : ''}
+          </div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function propGradient(type) {
+  const g = {
+    apartment: '#c8a96e22 0%, #1a181430 100%',
+    house:     '#6b8c4222 0%, #2d4a1830 100%',
+    studio:    '#9b7fc422 0%, #3d1a6030 100%',
+    villa:     '#c8a96e22 0%, #7a5c2a30 100%',
+    commercial:'#5c87c822 0%, #1a2a4030 100%',
+  };
+  return g[type] || g.apartment;
+}
+
+function filterProperties() {
+  const search = document.getElementById('prop-search').value.toLowerCase();
+  const status = document.getElementById('prop-status').value;
+  const type = document.getElementById('prop-type').value;
+
+  const filtered = state.properties.filter(p => {
+    const matchSearch = !search || p.title.toLowerCase().includes(search) || p.address.toLowerCase().includes(search) || p.city.toLowerCase().includes(search);
+    const matchStatus = !status || p.status === status;
+    const matchType = !type || p.type === type;
+    return matchSearch && matchStatus && matchType;
+  });
+  renderProperties(filtered);
+}
+
+async function deleteProperty(id) {
+  if (!confirm('Delete this property? This cannot be undone.')) return;
+  try {
+    await api.delete(`/properties/${id}`);
+    toast('Property deleted', 'default');
+    await loadProperties();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── TENANTS ─────────────────────────────────────────────
+async function loadTenants() {
+  const data = await api.get('/tenants');
+  state.tenants = data;
+  const tbody = document.getElementById('tenants-body');
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="5">${emptyState('No tenants yet')}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(t => `
+    <tr>
+      <td>
+        <div class="font-medium">${t.name}</div>
+        <div class="text-xs text-warm-gray">${t.email}</div>
+        ${t.phone ? `<div class="text-xs text-warm-gray">${t.phone}</div>` : ''}
+      </td>
+      <td>
+        ${t.id_verified
+          ? `<span class="badge badge-active">✓ Verified</span>`
+          : `<span class="badge badge-pending">Unverified</span>`}
+      </td>
+      <td>
+        ${t.credit_score ? `
+          <div class="flex items-center gap-2">
+            <div class="score-bar w-20"><div class="score-fill" style="width:${((t.credit_score - 300)/550*100).toFixed(0)}%;background:${scoreColor(t.credit_score)}"></div></div>
+            <span class="text-sm font-medium" style="color:${scoreColor(t.credit_score)}">${t.credit_score}</span>
+          </div>` : '<span class="text-warm-gray text-sm">—</span>'}
+      </td>
+      <td>${t.current_property ? `<span class="text-sm">${t.current_property}</span>` : '<span class="text-warm-gray text-sm">No active lease</span>'}</td>
+      <td>
+        <button class="btn-outline btn-sm" onclick="deleteTenant(${t.id})">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function deleteTenant(id) {
+  if (!confirm('Delete this tenant?')) return;
+  try {
+    await api.delete(`/tenants/${id}`);
+    toast('Tenant removed');
+    await loadTenants();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+// ─── LEASES ──────────────────────────────────────────────
+async function loadLeases() {
+  const data = await api.get('/leases');
+  state.leases = data;
+  const list = document.getElementById('leases-list');
+  if (!data.length) {
+    list.innerHTML = emptyState('No leases found');
+    return;
+  }
+  list.innerHTML = data.map((l, i) => {
+    const days = parseInt(l.days_remaining);
+    const daysColor = days < 30 ? '#dc2626' : days < 90 ? '#d97706' : '#15803d';
+    return `
+      <div class="card p-5 flex flex-wrap gap-4 items-center animate-fade-up" style="animation-delay:${i * 0.06}s">
+        <div class="flex-1 min-w-48">
+          <div class="font-medium mb-0.5">${l.property_title}</div>
+          <div class="text-xs text-warm-gray">${l.property_address}</div>
+        </div>
+        <div class="flex-1 min-w-32">
+          <div class="text-sm font-medium">${l.tenant_name}</div>
+          <div class="text-xs text-warm-gray">${l.tenant_email}</div>
+        </div>
+        <div class="text-sm text-warm-gray">
+          <div>${fmtDate(l.start_date)} → ${fmtDate(l.end_date)}</div>
+        </div>
+        <div class="font-serif text-xl">${fmt(l.rent_pcm)}<span class="text-sm text-warm-gray font-sans">/mo</span></div>
+        ${badge(l.status)}
+        ${l.status === 'active' ? `<div class="text-xs font-semibold" style="color:${daysColor}">${days > 0 ? days + 'd left' : 'Expired'}</div>` : ''}
+        ${l.status === 'active' ? `<button class="btn-outline btn-sm" onclick="terminateLease(${l.id})">Terminate</button>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function terminateLease(id) {
+  if (!confirm('Terminate this lease? Property will be marked available.')) return;
+  try {
+    await api.put(`/leases/${id}`, { status: 'terminated' });
+    toast('Lease terminated — property now available', 'default');
+    await loadLeases();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── PAYMENTS ────────────────────────────────────────────
+async function loadPayments() {
+  const data = await api.get('/payments');
+  state.payments = data;
+  const tbody = document.getElementById('payments-body');
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="8">${emptyState('No payment records')}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td class="font-medium">${p.property_title}</td>
+      <td class="text-warm-gray">${p.tenant_name}</td>
+      <td class="font-medium">${fmt(p.amount)}</td>
+      <td class="text-warm-gray">${fmtDate(p.due_date)}</td>
+      <td class="text-warm-gray">${fmtDate(p.paid_date)}</td>
+      <td class="text-warm-gray">${p.method || '—'}</td>
+      <td>${badge(p.status)}</td>
+      <td>
+        ${p.status !== 'paid' && p.status !== 'waived' ? `
+          <button class="btn-gold btn-sm" onclick="markPaid(${p.id})">Mark Paid</button>
+        ` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function markPaid(id) {
+  try {
+    await api.put(`/payments/${id}`, { status: 'paid', method: 'Bank Transfer' });
+    toast('Payment marked as paid', 'success');
+    await loadPayments();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── MAINTENANCE ─────────────────────────────────────────
+async function loadMaintenance() {
+  const data = await api.get('/maintenance');
+  state.maintenance = data;
+
+  const columns = { open: [], in_progress: [], resolved: [] };
+  data.forEach(m => {
+    const key = m.status === 'in_progress' ? 'in_progress' : m.status;
+    if (columns[key]) columns[key].push(m);
+  });
+
+  ['open','in_progress','resolved'].forEach(col => {
+    document.getElementById(`count-${col}`).textContent = columns[col].length;
+    const el = document.getElementById(`kanban-${col}`);
+    if (!columns[col].length) {
+      el.innerHTML = `<div class="text-center text-warm-gray text-sm py-6">No items</div>`;
+      return;
+    }
+    el.innerHTML = columns[col].map(m => `
+      <div class="kanban-card">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <span class="font-medium text-sm leading-snug">${m.title}</span>
+          ${badge(m.priority)}
+        </div>
+        <div class="text-xs text-warm-gray mb-1">${m.property_title}</div>
+        ${m.tenant_name ? `<div class="text-xs text-warm-gray mb-2">Tenant: ${m.tenant_name}</div>` : ''}
+        <div class="text-xs text-warm-gray mb-3">${fmtDate(m.created_at)}</div>
+        <div class="flex gap-2 flex-wrap">
+          ${m.status === 'open' ? `<button class="btn-gold btn-sm" onclick="updateMaint(${m.id},'in_progress',event)">Start</button>` : ''}
+          ${m.status === 'in_progress' ? `<button class="btn-gold btn-sm" onclick="updateMaint(${m.id},'resolved',event)">Resolve</button>` : ''}
+          ${m.status === 'resolved' ? `<div class="text-xs text-green-600">Resolved ${fmtDate(m.resolved_at)}</div>` : ''}
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
+async function updateMaint(id, status, evt) {
+  evt.stopPropagation();
+  const item = state.maintenance.find(m => m.id === id);
+  if (!item) return;
+  try {
+    await api.put(`/maintenance/${id}`, { status, priority: item.priority, title: item.title, description: item.description });
+    toast(`Issue marked as ${status.replace('_',' ')}`, 'success');
+    await loadMaintenance();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── MODALS ──────────────────────────────────────────────
+function openModal(name) {
+  document.getElementById(`modal-${name}`).style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  // Populate selects
+  if (name === 'add-lease') {
+    const ps = document.getElementById('lease-prop-select');
+    const ts = document.getElementById('lease-tenant-select');
+    ps.innerHTML = state.properties.filter(p => p.status === 'available').map(p => `<option value="${p.id}">${p.title} — ${p.city}</option>`).join('');
+    ts.innerHTML = state.tenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  }
+  if (name === 'add-maintenance') {
+    const ps = document.getElementById('maint-prop-select');
+    const ts = document.getElementById('maint-tenant-select');
+    ps.innerHTML = state.properties.map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+    ts.innerHTML = '<option value="">— None —</option>' + state.tenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  }
+}
+
+function closeModal(name) {
+  document.getElementById(`modal-${name}`).style.display = 'none';
+  document.body.style.overflow = '';
+  document.getElementById(`form-${name}`)?.reset();
+}
+
+function closeModalOutside(event, name) {
+  if (event.target === event.currentTarget) closeModal(name);
+}
+
+// ─── FORM SUBMISSIONS ────────────────────────────────────
+async function submitProperty(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = {
+    landlord_id: parseInt(fd.get('landlord_id')),
+    title: fd.get('title'),
+    description: fd.get('description'),
+    address: fd.get('address'),
+    city: fd.get('city'),
+    postcode: fd.get('postcode'),
+    type: fd.get('type'),
+    bedrooms: parseInt(fd.get('bedrooms')),
+    bathrooms: parseInt(fd.get('bathrooms')),
+    area_sqft: fd.get('area_sqft') ? parseInt(fd.get('area_sqft')) : null,
+    rent_pcm: parseFloat(fd.get('rent_pcm')),
+    amenities: [],
+  };
+  try {
+    await api.post('/properties', body);
+    toast('Property added successfully', 'success');
+    closeModal('add-property');
+    await loadProperties();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function submitTenant(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = {
+    name: fd.get('name'),
+    email: fd.get('email'),
+    phone: fd.get('phone') || null,
+    id_verified: fd.get('id_verified') === 'on',
+    credit_score: fd.get('credit_score') ? parseInt(fd.get('credit_score')) : null,
+  };
+  try {
+    await api.post('/tenants', body);
+    toast('Tenant added', 'success');
+    closeModal('add-tenant');
+    await loadTenants();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function submitLease(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = {
+    property_id: parseInt(fd.get('property_id')),
+    tenant_id: parseInt(fd.get('tenant_id')),
+    start_date: fd.get('start_date'),
+    end_date: fd.get('end_date'),
+    rent_pcm: parseFloat(fd.get('rent_pcm')),
+    deposit: parseFloat(fd.get('deposit')),
+  };
+  try {
+    await api.post('/leases', body);
+    toast('Lease created — property marked occupied', 'success');
+    closeModal('add-lease');
+    await loadLeases();
+    state.properties = await api.get('/properties');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function submitMaintenance(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const body = {
+    property_id: parseInt(fd.get('property_id')),
+    tenant_id: fd.get('tenant_id') ? parseInt(fd.get('tenant_id')) : null,
+    title: fd.get('title'),
+    description: fd.get('description') || null,
+    priority: fd.get('priority'),
+  };
+  try {
+    await api.post('/maintenance', body);
+    toast('Maintenance issue logged', 'success');
+    closeModal('add-maintenance');
+    await loadMaintenance();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── EMPTY STATE ─────────────────────────────────────────
+function emptyState(msg) {
+  return `
+    <div class="empty-state">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none" class="mb-4 opacity-30">
+        <rect x="8" y="16" width="40" height="30" rx="4" stroke="#1a1814" stroke-width="2"/>
+        <path d="M8 24h40" stroke="#1a1814" stroke-width="2"/>
+        <path d="M20 36h16" stroke="#1a1814" stroke-width="2" stroke-linecap="round"/>
+        <path d="M24 30h8" stroke="#1a1814" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <p class="text-warm-gray text-sm">${msg}</p>
+    </div>`;
+}
+
+// ─── INIT ────────────────────────────────────────────────
+async function init() {
+  // Date display
+  const now = new Date();
+  document.getElementById('current-date').textContent = now.toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  });
+
+  // Pre-load properties + tenants for modal selects
+  try {
+    state.properties = await api.get('/properties');
+    state.tenants = await api.get('/tenants');
+  } catch(_) {}
+
+  await loadDashboard();
+}
+
+init();
+</script>
+</body>
+</html>
