@@ -1,7 +1,7 @@
 # EstateHub — Rental Management Platform
 
 
-**Live:** https://estate-hub-coral.vercel.app/
+**Live:** https://estate-bsb0yw04e-krupalmewadas-projects.vercel.app/
 
 
 Luxury editorial rental management platform built with Node.js, TypeScript, Express, PostgreSQL, and vanilla HTML/CSS.
